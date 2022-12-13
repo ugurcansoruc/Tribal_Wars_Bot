@@ -1,66 +1,58 @@
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.common.by import By
+
+from Oyun import Tribal_Wars, Sayfalar
+from threading import Thread
+
 import time
 
-ffOptions = Options()
-ffOptions.add_argument("-profile")
-ffOptions.add_argument('/home/ugurcan/snap/firefox/common/.mozilla/firefox/j4p1uupc.default')
+class Tribal_Wars_Bot:
+    def __init__(self):
+        self.web_driver = self.browser_baslat(self.browser_ayarlarini_gerceklestir()) 
+        self.tribal_wars = Tribal_Wars(self.web_driver)
+        pass
 
-# Tarayıcının kullanılacağı sürücüyü yükleyin
-driver = webdriver.Firefox(options=ffOptions)
-
-# Tarayıcıyı açın ve bir web sitesine gidin
-driver.get("https://tr74.klanlar.org/")
-time.sleep(3)
-
-driver.get("https://tr74.klanlar.org/page/play/tr74")
-time.sleep(1)
-
-driver.get("https://tr74.klanlar.org/game.php?village=42080&screen=place&mode=scavenge")
-time.sleep(1)
-
-while True:
-    try:
-        #time.sleep(driver.find_element(By.CLASS_NAME, "return-countdown").text.split(":")[1] * 60)
-        driver.get("https://tr74.klanlar.org/page/play/tr74")
-        time.sleep(1)   
-        driver.get("https://tr74.klanlar.org/game.php?village=42080&screen=place&mode=scavenge")
-        time.sleep(1)
-
-        driver.find_element(By.LINK_TEXT, "Tüm birlikler").click()
-        time.sleep(1)
-
-        value = driver.find_element(By.CLASS_NAME, "duration").text #hangi sureyi aldigimiz onemli degil birini alsak yeter
-        time.sleep(1)
-        if value != "":
-            # if daha once yapilmamissa
-            try:
-                driver.find_elements(By.LINK_TEXT, "Başla")[1].click() #tiklarken ikinciye tiklayacagiz.
-            except:
-                try:
-                    driver.find_element(By.LINK_TEXT, "Başla").click()
-                except:
-                    pass
+    def browser_islem_limitle(fonksiyon):
+        def sureli_browser_islem_limitle(self, * args, ** kwargs):
+            fonksiyon()
             time.sleep(10)
+            pass
+        return sureli_browser_islem_limitle
 
-            driver.quit()
-            time.sleep(3000)
+    @browser_islem_limitle
+    def browser_baslat(_options):
+        return webdriver.Firefox(options = _options)
 
-            driver = webdriver.Firefox(options=ffOptions)
-            time.sleep(5)
+    @browser_islem_limitle
+    def browser_durdur(self):
+        self.web_driver.quit()
+        pass
 
-            #time.sleep(driver.find_element(By.CLASS_NAME, "return-countdown").text.split(":")[1] * 60)
-            driver.get("https://tr74.klanlar.org/page/play/tr74")
-            time.sleep(1)
+    def browser_ayarlarini_gerceklestir(self):
+        self.web_driver_options = Options()
+        self.web_driver_options.add_argument("-profile")
+        self.web_driver_options.add_argument('/home/ugurcan/snap/firefox/common/.mozilla/firefox/j4p1uupc.default')        
+        return self.web_driver_options
+    
+    def oto_temizlik_yagmasi_baslat(self):
+        self.oto_temizlik_thread = Thread(target = self.oto_temizlik_yagmasi_gerceklestir, daemon=True)
+        self.oto_temizlik_thread.start()
+        pass
 
-            driver.get("https://tr74.klanlar.org/game.php?village=42080&screen=place&mode=scavenge")
-            time.sleep(1)
-    except:
-        time.sleep(1)
-    time.sleep(100)
+    def oto_temizlik_yagmasi_durdur(self):
+        self.oto_temizlik_thread.kill()
+        pass
 
-
-# Tarayıcıyı kapatın
-time.sleep(5)
-driver.quit()
+    def oto_temizlik_yagmasi_gerceklestir(self):
+        while True:
+            self.tribal_wars.git_ana_ekran()
+            self.tribal_wars.sec_dunya()
+            self.tribal_wars.git_ictima_meydani(Sayfalar.Ictima_Meydani.TEMIZLEME)
+            self.tribal_wars.git_ictima_meydani()
+            if "" != self.tribal_wars.al_ictima_meydani_sure_bilgisi():
+                self.tribal_wars.baslat_ictima_meydani_temizlik()
+                self.browser_durdur()
+                time.sleep(3000) # ortalama temizlik suresi -> bu oyun icerisinden cekilmeli.
+                self.browser_baslat()
+            time.sleep(10)
