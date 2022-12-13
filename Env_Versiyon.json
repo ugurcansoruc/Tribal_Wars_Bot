@@ -1,0 +1,11 @@
+{
+    "master": {
+        "tarih": "2022-12-13",
+        "dil": {
+            "python": "3.10.8"
+        },
+        "kutuphaneler":{
+            "python": "requirements.txt"
+        }
+    }
+}
