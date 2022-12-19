@@ -71,17 +71,49 @@ class Bina_Yukseltme_Botu_c:
             self.Bina_Bilgileri_Guncelle()
 
             for yukseltilecek_bina_id in self.yukseltilecek_binalar:
-                # Bina suan yukseltilebilir mi kontrol et
+                # Eger yukseltilebilirse binayi yukseltelim
                 if True == self.bina_listesi[yukseltilecek_bina_id].bina_yukseltilebilir_mi:
-                    # Binayi yukselt
                     self.bina_listesi[yukseltilecek_bina_id].Bina_Yukselt()
                     self.yukseltilmis_binalar.append(yukseltilecek_bina_id)
 
-            time.sleep(10)
+            # Kuyruk dolu mu kontrol et
+            kuyruk_dolu_mu_b = self.Kuyruk_Dolu_Mu()
+            # Kuyruk doluysa kuyrugun bitme suresini hesaplayalim ve ona gore sleep atalim
+            if True == kuyruk_dolu_mu_b:
+                toplam_sure_sn = self.Kuyruk_Suresi_Hesapla()
+                print(toplam_sure_sn)
+                time.sleep(toplam_sure_sn + 10)
+
+            # Eger yeterli hammadde yoksa 20 dk bekleyelim
+            time.sleep(1200)
 
         self.driver.quit()
 
+    def Kuyruk_Dolu_Mu(self):
+        try:
+            self.driver.find_element(By.ID, "buildorder_1")
+            return True
+        except:
+            return False
 
+    def Kuyruk_Suresi_Hesapla(self):
+        kuyruk_1_xpath = "//*[@id=\"buildqueue\"]/tr[2]/td[2]/span"
+        kuyruk_2_xpath = "//*[@id=\"buildorder_1\"]/td[2]/span"
+
+        time.sleep(10)
+
+        kuyruk_1_sure_str = self.driver.find_element(By.XPATH, kuyruk_1_xpath).text
+        kuyruk_2_sure_str = self.driver.find_element(By.XPATH, kuyruk_2_xpath).text
+
+        kuyruk_1_sure_sn = self.Sureyi_Saniyeye_Cevir(kuyruk_1_sure_str)
+        kuyruk_2_sure_sn = self.Sureyi_Saniyeye_Cevir(kuyruk_2_sure_str)
+
+        return kuyruk_1_sure_sn + kuyruk_2_sure_sn
+
+    def Sureyi_Saniyeye_Cevir(self, sure_str):
+        sure_list   = sure_str.split(":")
+        sure        = int(sure_list[0]) * 3600 + int(sure_list[1]) * 60 + int(sure_list[2])
+        return sure
 
 class Bina:
     def __init__(self, driver, bina_ismi_tr, bina_ismi_ing):
@@ -92,8 +124,8 @@ class Bina:
         self.ihtiyac_kil                = None
         self.su_anki_seviye             = None
         self.ihtiyac_demir              = None
-        self.bina_yukseltilebilir_mi    = False
         self.bina_yukseltiliyor_mu      = False
+        self.bina_yukseltilebilir_mi    = False
         self.yapim_suresi_sn            = None
 
         # Bina bilgilerini alalim
@@ -164,16 +196,11 @@ class Bina:
 
     def Bina_Yukseltilebilir_Mi_Guncelle(self):
         try:
-            bina_yukseltme_xpath            = "//*[@id=\"main_buildlink_{}_{}\"]".format(self.bina_ismi_ing,
-                                                                                         self.su_anki_seviye + 1)
-            self.driver.find_element(By.XPATH, bina_yukseltme_xpath)
-            self.bina_yukseltilebilir_mi    = True
+            bina_yukseltememe_uyarisi_xpath = "//*[@id=\"main_buildrow_{}\"]/td[7]/div".format(self.bina_ismi_ing)
+            bina_yukseltememe_uyarisi_div   = self.driver.find_element(By.XPATH, bina_yukseltememe_uyarisi_xpath)
+            self.bina_yukseltilebilir_mi = False
         except:
-            self.bina_yukseltilebilir_mi    = False
-
-        Global_Degiskenler.log_yoneticisi_c_o.Log_Yaz(
-            "{} binasinin yukseltilebilir mi bilgisi guncellendi".format(self.bina_ismi_tr),
-            Veri_Yapilari.Log_Tipi.BILGI)
+            self.bina_yukseltilebilir_mi = True
 
     def Bina_Yukselt(self):
         try:
@@ -183,13 +210,15 @@ class Bina:
             bina_yukseltme_linki = self.driver.find_element(By.XPATH, bina_yukseltme_xpath).get_attribute("href")
             self.driver.get(bina_yukseltme_linki)
             time.sleep(10)
-
-            #self.Bina_Bilgileri_Guncelle()
+            self.bina_yukseltiliyor_mu  = True
+            self.su_anki_seviye         = self.su_anki_seviye + 1
 
             Global_Degiskenler.log_yoneticisi_c_o.Log_Yaz(
                 "{} binasi yukseltilmeye baslandi".format(self.bina_ismi_tr),
                 Veri_Yapilari.Log_Tipi.BILGI)
+            return True
         except:
             Global_Degiskenler.log_yoneticisi_c_o.Log_Yaz(
                 "{} binasi yukseltilemedi".format(self.bina_ismi_tr),
                 Veri_Yapilari.Log_Tipi.BILGI)
+            return False
